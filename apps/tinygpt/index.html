@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TinyGPT Writer</title>
+<meta name="description" content="Train a small character-level GPT on your own text directly in the browser, then generate new text.">
+<link rel="stylesheet" href="../../assets/site.css">
+<script src="../../assets/theme.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="corpora.js"></script>
+<style>
+  h1 { font-size: 36px; margin: 8px 0 6px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  #corpus { height: 220px; font-size: 12px; }
+  #out { min-height: 260px; white-space: pre-wrap; font: 14px/1.6 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-wrap: anywhere; }
+  #out .seed { color: var(--muted); }
+  #curve { width: 100%; height: 120px; margin-top: 10px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; }
+  h3 { margin: 0 0 8px; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="back" href="../../">← portfolio</a>
+    <button class="theme-btn" type="button">dark</button>
+  </div>
+  <span class="eyebrow">app · miniGPT</span>
+  <h1>TinyGPT Writer</h1>
+  <p class="lede">A real decoder-only transformer (token + position embeddings, causal multi-head self-attention, MLP, LayerNorm, weight-tied output) trained from scratch in this tab with Adam on your GPU via WebGL. Give it text, press train, and ask it to write.</p>
+
+  <div class="layout">
+    <div class="panel">
+      <h3>1 · Data</h3>
+      <div class="controls" style="margin-top:0">
+        <label>corpus <select id="pick"></select></label>
+        <label class="btn ghost" style="color:var(--fg)">upload .txt <input type="file" id="file" accept=".txt,.md,.py,.js,.csv,text/*" hidden></label>
+      </div>
+      <textarea id="corpus" spellcheck="false" aria-label="Training text"></textarea>
+      <p class="note" id="hint"></p>
+      <h3 style="margin-top:18px">2 · Model</h3>
+      <div class="controls" style="margin-top:0">
+        <label>layers <select id="nl"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+        <label>width <select id="nd"><option>32</option><option selected>64</option><option>96</option><option>128</option></select></label>
+        <label>heads <select id="nh"><option>2</option><option selected>4</option><option>8</option></select></label>
+        <label>context <select id="nt"><option>16</option><option selected>48</option><option>64</option><option>96</option></select></label>
+      </div>
+      <div class="controls">
+        <button class="btn" id="train">train</button>
+        <button class="btn ghost" id="resetm">reset model</button>
+      </div>
+      <div class="stats">
+        <span class="stat">backend <b id="be">…</b></span>
+        <span class="stat">params <b id="pc">–</b></span>
+        <span class="stat">vocab <b id="vc">–</b></span>
+        <span class="stat">step <b id="st">0</b></span>
+        <span class="stat">loss <b id="ls">–</b></span>
+        <span class="stat">steps/s <b id="sps">–</b></span>
+      </div>
+      <canvas id="curve"></canvas>
+    </div>
+    <div class="panel">
+      <h3>3 · Write</h3>
+      <input type="text" id="prompt" placeholder="optional prompt, e.g. To be" aria-label="Prompt">
+      <div class="controls">
+        <label>temperature <input type="range" id="temp" min="0.1" max="1.5" step="0.05" value="0.8"> <span id="tv" class="mono">0.80</span></label>
+        <label>length <select id="len"><option>200</option><option selected>400</option><option>800</option></select></label>
+        <button class="btn" id="gen">generate</button>
+      </div>
+      <div id="out"><span class="seed">Train for a few hundred steps, then generate. Untrained output is random characters.</span></div>
+      <p class="note">Loss is cross-entropy in nats per character. A uniform guess scores ln(vocab); below about 1.5 the text starts to look like words.</p>
+    </div>
+  </div>
+  <footer class="site">TinyGPT Writer · part of the portfolio app collection</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let model = null, data = null, training = false, losses = [], stepN = 0, opt = null;
+
+// ---------- data ----------
+for (const k in CORPORA) { const o = document.createElement("option"); o.value = k; o.textContent = CORPORA[k].label; $("pick").appendChild(o); }
+$("pick").value = "shakespeare";
+function loadCorpus() { const c = CORPORA[$("pick").value]; if (c.text) $("corpus").value = c.text; $("hint").textContent = c.hint; resetModel(); }
+$("pick").onchange = loadCorpus;
+$("corpus").addEventListener("input", () => { $("pick").value = "custom"; $("hint").textContent = CORPORA.custom.hint; resetModel(); });
+$("file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { $("corpus").value = String(r.result).slice(0, 2e6); $("pick").value = "custom"; $("hint").textContent = CORPORA.custom.hint; resetModel(); }; r.readAsText(f);
+};
+function prepData() {
+  const text = $("corpus").value; if (text.length < 200) return null;
+  const chars = [...new Set(text)].sort(), stoi = new Map(chars.map((c, i) => [c, i]));
+  return { chars, stoi, ids: Int32Array.from(text, c => stoi.get(c)) };
+}
+
+// ---------- model ----------
+function rnd(shape, std) { return tf.variable(tf.randomNormal(shape, 0, std)); }
+function buildModel(V) {
+  const L = +$("nl").value, D = +$("nd").value, H = +$("nh").value, T = +$("nt").value;
+  const m = { V, L, D, H, T, layers: [] };
+  m.tok = rnd([V, D], 0.02); m.pos = rnd([T, D], 0.02);
+  for (let l = 0; l < L; l++) m.layers.push({
+    g1: tf.variable(tf.ones([D])), b1: tf.variable(tf.zeros([D])),
+    qkv: rnd([D, 3 * D], 0.02), wo: rnd([D, D], 0.02 / Math.sqrt(2 * L)),
+    g2: tf.variable(tf.ones([D])), b2: tf.variable(tf.zeros([D])),
+    w1: rnd([D, 4 * D], 0.02), c1: tf.variable(tf.zeros([4 * D])),
+    w2: rnd([4 * D, D], 0.02 / Math.sqrt(2 * L)), c2: tf.variable(tf.zeros([D]))
+  });
+  m.gf = tf.variable(tf.ones([D])); m.bf = tf.variable(tf.zeros([D]));
+  m.vars = [m.tok, m.pos, m.gf, m.bf, ...m.layers.flatMap(Object.values)];
+  m.params = m.vars.reduce((a, v) => a + v.size, 0);
+  const mask = new Float32Array(T * T); for (let i = 0; i < T; i++) for (let j = i + 1; j < T; j++) mask[i * T + j] = -1e9;
+  m.mask = tf.tensor2d(mask, [T, T]);
+  return m;
+}
+function ln(x, g, b) { const { mean, variance } = tf.moments(x, -1, true); return x.sub(mean).div(variance.add(1e-5).sqrt()).mul(g).add(b); }
+function gelu(x) { return x.mul(tf.sigmoid(x.mul(1.702))); }
+
+// idx: int32 [B, t] -> logits [B*t, V]
+function forward(m, idx) {
+  const [B, t] = idx.shape, D = m.D, H = m.H, dh = D / H;
+  let x = tf.gather(m.tok, idx).add(m.pos.slice([0, 0], [t, D]));
+  const mask = m.mask.slice([0, 0], [t, t]);
+  for (const p of m.layers) {
+    const h = ln(x, p.g1, p.b1).reshape([B * t, D]);
+    const [q, k, v] = tf.split(h.matMul(p.qkv), 3, 1).map(z => z.reshape([B, t, H, dh]).transpose([0, 2, 1, 3]));
+    const att = tf.softmax(tf.matMul(q, k, false, true).mul(1 / Math.sqrt(dh)).add(mask));
+    const y = tf.matMul(att, v).transpose([0, 2, 1, 3]).reshape([B * t, D]).matMul(p.wo).reshape([B, t, D]);
+    x = x.add(y);
+    const h2 = ln(x, p.g2, p.b2).reshape([B * t, D]);
+    x = x.add(gelu(h2.matMul(p.w1).add(p.c1)).matMul(p.w2).add(p.c2).reshape([B, t, D]));
+  }
+  return ln(x, m.gf, m.bf).reshape([B * t, D]).matMul(m.tok, false, true);
+}
+
+function batch(B) {
+  const T = model.T, n = data.ids.length - T - 1, X = new Int32Array(B * T), Y = new Int32Array(B * T);
+  for (let b = 0; b < B; b++) { const o = Math.floor(Math.random() * n); X.set(data.ids.subarray(o, o + T), b * T); Y.set(data.ids.subarray(o + 1, o + T + 1), b * T); }
+  return [tf.tensor2d(X, [B, T], "int32"), tf.tensor1d(Y, "int32")];
+}
+
+function resetModel() {
+  training = false; $("train").textContent = "train";
+  if (model) { model.vars.forEach(v => v.dispose()); model.mask.dispose(); model = null; }
+  if (opt) { opt.dispose(); opt = null; }
+  losses = []; stepN = 0; data = prepData();
+  $("st").textContent = 0; $("ls").textContent = "–"; $("sps").textContent = "–";
+  $("vc").textContent = data ? data.chars.length : "–";
+  if (data) { model = buildModel(data.chars.length); $("pc").textContent = (model.params / 1000).toFixed(1) + "k"; $("ls").textContent = "≈" + Math.log(data.chars.length).toFixed(2); }
+  else $("pc").textContent = "need ≥200 chars";
+  drawCurve();
+}
+["nl", "nd", "nh", "nt"].forEach(id => $(id).onchange = () => {
+  if (+$("nd").value % +$("nh").value) $("nh").value = 2;
+  resetModel();
+});
+
+async function trainLoop() {
+  if (!model) return;
+  opt = opt || tf.train.adam(3e-3, 0.9, 0.99);
+  let t0 = performance.now(), s0 = stepN;
+  while (training) {
+    const lr = stepN < 100 ? 3e-3 * (stepN + 1) / 100 : 3e-3; opt.learningRate = lr;
+    const [X, Y] = batch(32);
+    const loss = opt.minimize(() => tf.losses.softmaxCrossEntropy(tf.oneHot(Y, model.V), forward(model, X)), true, model.vars);
+    X.dispose(); Y.dispose(); stepN++;
+    if (stepN % 10 === 0) {
+      const v = (await loss.data())[0]; losses.push([stepN, v]);
+      $("ls").textContent = v.toFixed(3); $("st").textContent = stepN;
+      const now = performance.now(); $("sps").textContent = ((stepN - s0) / (now - t0) * 1000).toFixed(1); drawCurve();
+    }
+    loss.dispose();
+    await tf.nextFrame();
+  }
+}
+$("train").onclick = () => {
+  if (!model) return;
+  training = !training; $("train").textContent = training ? "pause" : "train";
+  if (training) trainLoop();
+};
+$("resetm").onclick = resetModel;
+
+// ---------- generation ----------
+$("temp").oninput = () => $("tv").textContent = (+$("temp").value).toFixed(2);
+let generating = false;
+$("gen").onclick = async () => {
+  if (!model || generating) return;
+  generating = true; $("gen").disabled = true;
+  const T = model.T, temp = +$("temp").value, n = +$("len").value;
+  let prompt = [...$("prompt").value].filter(c => data.stoi.has(c));
+  if (!prompt.length) prompt = [data.chars[Math.floor(Math.random() * data.chars.length)]];
+  const ctx = prompt.map(c => data.stoi.get(c));
+  const out = $("out"); out.innerHTML = ""; const seed = document.createElement("span"); seed.className = "seed"; seed.textContent = prompt.join(""); out.appendChild(seed);
+  const gen = document.createTextNode(""); out.appendChild(gen);
+  for (let i = 0; i < n; i++) {
+    const win = ctx.slice(-T);
+    const probs = tf.tidy(() => {
+      const logits = forward(model, tf.tensor2d(win, [1, win.length], "int32"));
+      return tf.softmax(logits.slice([win.length - 1, 0], [1, model.V]).div(temp)).dataSync();
+    });
+    let r = Math.random(), k = 0; while (k < probs.length - 1 && (r -= probs[k]) > 0) k++;
+    ctx.push(k); gen.textContent += data.chars[k];
+    if (i % 6 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+  generating = false; $("gen").disabled = false;
+};
+
+// ---------- chart ----------
+function drawCurve() {
+  const cv = $("curve"), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr; const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  g.strokeStyle = cssVar("--line"); g.strokeRect(0.5, 0.5, w - 1, h - 1);
+  if (losses.length < 2) return;
+  const hi = Math.max(...losses.map(l => l[1])), lo = Math.min(...losses.map(l => l[1])) * 0.95, last = losses[losses.length - 1][0];
+  g.strokeStyle = cssVar("--accent"); g.lineWidth = 1.8; g.beginPath();
+  losses.forEach(([s, v], i) => { const x = s / last * (w - 8) + 4, y = 4 + (1 - (v - lo) / (hi - lo)) * (h - 8); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.stroke();
+  g.fillStyle = cssVar("--muted"); g.font = "10px " + cssVar("--mono"); g.fillText(hi.toFixed(2), 6, 12); g.fillText(lo.toFixed(2), 6, h - 6);
+}
+window.addEventListener("themechange", drawCurve);
+
+tf.ready().then(() => { $("be").textContent = tf.getBackend(); loadCorpus(); });
+</script>
+</body>
+</html>

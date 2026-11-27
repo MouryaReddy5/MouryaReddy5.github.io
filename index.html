@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- TODO: replace "Mourya Reddy" everywhere with your real name -->
+<title>Mourya Reddy</title>
+<meta name="description" content="Machine learning engineer. Interactive apps built from modern model architectures, plus projects and experience.">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/theme.js"></script>
+<style>
+  header.hero h1 { font-size: 44px; margin: 0 0 4px; }
+  header.hero .role { font: 14px var(--mono); color: var(--muted); margin-bottom: 20px; }
+  header.hero .eq { font-family: var(--serif); font-style: italic; color: var(--muted); margin: 0 0 20px; }
+  nav.links { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 14px var(--mono); }
+  section { margin-top: 56px; }
+  section > h2 { font-size: 26px; margin: 0 0 4px; }
+  section > .sub { color: var(--muted); margin: 0 0 20px; font-size: 15px; }
+  .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .app {
+    display: block; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; color: var(--fg); transition: border-color .15s, transform .15s;
+  }
+  .app:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
+  .app canvas { width: 100%; height: 110px; border-radius: 8px; background: var(--bg); margin-bottom: 12px; }
+  .app h3 { margin: 0 0 4px; font-size: 20px; }
+  .app p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  ul.list li { padding: 14px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; }
+  ul.list li:last-child { border-bottom: 1px solid var(--line); }
+  ul.list .t { font-weight: 600; }
+  ul.list .d { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+  ul.list .m { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+  .skills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skills .tag { font-size: 12px; padding: 4px 10px; color: var(--fg); }
+  @media (max-width: 520px) { header.hero h1 { font-size: 34px; } ul.list li { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="eyebrow">portfolio</span>
+    <button class="theme-btn" type="button">dark</button>
+  </div>
+
+  <header class="hero">
+    <h1>Mourya Reddy</h1>
+    <!-- TODO: your title -->
+    <div class="role">Machine Learning Engineer · AI Researcher</div>
+    <p class="eq">softmax(QKᵀ / √d) · V</p>
+    <!-- TODO: replace with your own 2–3 sentence bio -->
+    <p class="lede">
+      I build and study deep learning systems, from attention variants and optimizers to
+      reinforcement learning for language models. Below are small apps that turn those ideas
+      into things you can play with, plus the projects I've shipped.
+    </p>
+    <nav class="links">
+      <a href="#apps">apps</a>
+      <a href="#projects">projects</a>
+      <a href="#experience">experience</a>
+      <a href="https://github.com/MouryaReddy5">github</a>
+      <!-- TODO: fill in real links -->
+      <a href="#" data-todo="linkedin">linkedin</a>
+      <a href="#" data-todo="email">email</a>
+      <a href="resume.pdf" data-todo="add resume.pdf to repo root">résumé</a>
+    </nav>
+  </header>
+
+  <section id="apps">
+    <h2>Apps</h2>
+    <p class="sub">Model ideas turned into tools you can use. Everything runs in your browser, no server.</p>
+    <div class="apps">
+      <a class="app" href="apps/attention-lens/">
+        <canvas data-thumb="attn"></canvas>
+        <h3>Attention Lens</h3>
+        <p>Type a sentence and watch multi-head attention form. Switch between sinusoidal, RoPE and ALiBi positions and see how each reshapes who attends to whom.</p>
+        <div class="tags"><span class="tag">transformer</span><span class="tag">RoPE</span><span class="tag">ALiBi</span></div>
+      </a>
+      <a class="app" href="apps/optimizer-arena/">
+        <canvas data-thumb="opt"></canvas>
+        <h3>Optimizer Arena</h3>
+        <p>Race SGD, Momentum, RMSProp, Adam and Muon across classic loss landscapes. Click anywhere to drop a new starting point.</p>
+        <div class="tags"><span class="tag">Muon</span><span class="tag">Adam</span><span class="tag">optimization</span></div>
+      </a>
+      <a class="app" href="apps/tinygpt/">
+        <canvas data-thumb="gpt"></canvas>
+        <h3>TinyGPT Writer</h3>
+        <p>Paste any text, train a small character-level GPT on it right in the tab, and generate new writing in the same style.</p>
+        <div class="tags"><span class="tag">miniGPT</span><span class="tag">TF.js</span><span class="tag">WebGL</span></div>
+      </a>
+      <a class="app" href="apps/grpo/">
+        <canvas data-thumb="grpo"></canvas>
+        <h3>GRPO Playground</h3>
+        <p>Teach a tiny policy arithmetic with Group Relative Policy Optimization and compare it against plain REINFORCE.</p>
+        <div class="tags"><span class="tag">GRPO</span><span class="tag">RL</span><span class="tag">DeepSeek</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section id="projects">
+    <h2>Projects</h2>
+    <p class="sub">Selected work on GitHub.</p>
+    <ul class="list">
+      <li>
+        <a class="t" href="https://github.com/MouryaReddy5/Parallel-CNN-Transformer-Video-Activity-Recognition">Parallel CNN + Transformer for Video Activity Recognition</a>
+        <span class="m">PyTorch</span>
+        <span class="d">Two-stream architecture combining parallel 3D CNNs with transformer-based spatio-temporal tokens, evaluated on UCF datasets.</span>
+      </li>
+      <li>
+        <a class="t" href="https://github.com/MouryaReddy5/CS336">CS336: Language Modeling from Scratch</a>
+        <span class="m">PyTorch</span>
+        <span class="d">Tokenizer, transformer LM, training loop and systems work from Stanford's CS336.</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- TODO: replace everything in this section with your real experience and education -->
+  <section id="experience">
+    <h2>Experience</h2>
+    <p class="sub">Roles and education.</p>
+    <ul class="list">
+      <li>
+        <span class="t">Role title · Company</span>
+        <span class="m">20XX – present</span>
+        <span class="d">One line on what you built and the measurable impact.</span>
+      </li>
+      <li>
+        <span class="t">Role title · Company</span>
+        <span class="m">20XX – 20XX</span>
+        <span class="d">One line on what you built and the measurable impact.</span>
+      </li>
+      <li>
+        <span class="t">Degree, Major · University</span>
+        <span class="m">20XX – 20XX</span>
+        <span class="d">Relevant coursework: distributed systems, language modeling, algorithms.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="skills">
+    <h2>Toolkit</h2>
+    <div class="skills">
+      <span class="tag">Python</span><span class="tag">PyTorch</span><span class="tag">JAX</span>
+      <span class="tag">Transformers</span><span class="tag">RL / RLHF</span><span class="tag">CUDA</span>
+      <span class="tag">Distributed systems</span><span class="tag">LLM agents</span><span class="tag">JavaScript</span>
+    </div>
+  </section>
+
+  <footer class="site">© <span id="yr"></span> Mourya Reddy · built with plain HTML, hosted on GitHub Pages</footer>
+</div>
+
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+// Small generative thumbnails for each app card, redrawn when the theme changes.
+function drawThumbs() {
+  document.querySelectorAll("canvas[data-thumb]").forEach(function (cv) {
+    var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = w * dpr; cv.height = h * dpr;
+    var g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+    var acc = cssVar("--accent"), mut = cssVar("--line"), cols = ["--c1","--c2","--c3","--c4","--c5"].map(cssVar);
+    var kind = cv.dataset.thumb;
+    if (kind === "attn") {
+      var n = 12, s = Math.min((w - 20) / n, (h - 20) / n), ox = (w - s * n) / 2, oy = (h - s * n) / 2;
+      for (var i = 0; i < n; i++) for (var j = 0; j <= i; j++) {
+        var v = Math.exp(-Math.abs(i - j) * 0.45) * (0.5 + 0.5 * Math.cos(i * 1.7 + j));
+        g.globalAlpha = 0.12 + 0.88 * v; g.fillStyle = acc;
+        g.fillRect(ox + j * s + 1, oy + i * s + 1, s - 2, s - 2);
+      }
+    } else if (kind === "opt") {
+      g.strokeStyle = mut; g.lineWidth = 1;
+      for (var r = 1; r < 9; r++) { g.beginPath(); g.ellipse(w / 2, h / 2, r * w / 18, r * h / 22, 0.4, 0, 7); g.stroke(); }
+      cols.slice(0, 4).forEach(function (c, k) {
+        g.strokeStyle = c; g.lineWidth = 2; g.beginPath();
+        var x = 20 + k * 6, y = 15 + k * 22;
+        for (var t = 0; t < 60; t++) {
+          x += (w / 2 - x) * (0.05 + k * 0.02) + Math.sin(t * (0.5 + k * 0.3)) * (6 - k) * Math.exp(-t / 20);
+          y += (h / 2 - y) * (0.07 + k * 0.01);
+          t ? g.lineTo(x, y) : g.moveTo(x, y);
+        }
+        g.stroke();
+      });
+    } else if (kind === "gpt") {
+      g.font = "13px " + cssVar("--mono"); g.fillStyle = cssVar("--muted");
+      var txt = "To be, or not to be: that is the qu|", lines = ["ROMEO:", "What light through yonder", "window breaks? It is the", "east, and the sun ▍"];
+      lines.forEach(function (l, k) { g.fillStyle = k === 3 ? acc : cssVar("--muted"); g.fillText(l, 14, 24 + k * 22); });
+    } else if (kind === "grpo") {
+      var G = 8, bw = (w - 40) / G;
+      var rw = [1, 0, 1, 1, 0, 0.5, 1, 0], mean = rw.reduce(function (a, b) { return a + b; }) / G;
+      g.strokeStyle = mut; g.beginPath(); g.moveTo(20, h / 2); g.lineTo(w - 20, h / 2); g.stroke();
+      rw.forEach(function (r, k) {
+        var a = (r - mean) * 70; g.fillStyle = a >= 0 ? cols[2] : cols[1];
+        g.fillRect(20 + k * bw + 3, h / 2 - Math.max(a, 0), bw - 6, Math.abs(a));
+      });
+    }
+  });
+}
+window.addEventListener("load", drawThumbs);
+window.addEventListener("resize", drawThumbs);
+window.addEventListener("themechange", drawThumbs);
+</script>
+</body>
+</html>

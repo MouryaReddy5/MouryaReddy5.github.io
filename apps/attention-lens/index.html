@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attention Lens</title>
+<meta name="description" content="See how multi-head attention and positional schemes (sinusoidal, RoPE, ALiBi) shape attention patterns over your own sentence.">
+<link rel="stylesheet" href="../../assets/site.css">
+<script src="../../assets/theme.js"></script>
+<style>
+  h1 { font-size: 36px; margin: 8px 0 6px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .heads { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+  .headbtn { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px; cursor: pointer; color: var(--muted); font: 11px var(--mono); }
+  .headbtn.on { border-color: var(--accent); color: var(--fg); }
+  .headbtn canvas { width: 100%; aspect-ratio: 1; margin-bottom: 4px; border-radius: 4px; }
+  .matrix { overflow-x: auto; }
+  .grid { display: grid; gap: 2px; font: 11px var(--mono); }
+  .grid .lab { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
+  .grid .lab.col { writing-mode: vertical-rl; transform: rotate(180deg); justify-content: flex-start; padding-bottom: 2px; }
+  .grid .lab.row { justify-content: flex-end; padding-right: 6px; cursor: pointer; }
+  .grid .lab.row.sel { color: var(--accent); font-weight: 600; }
+  .grid .cell { aspect-ratio: 1; border-radius: 2px; min-width: 14px; }
+  .grid .cell.masked { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--line) 3px 4px); }
+  .sentence { line-height: 2.3; font-size: 18px; }
+  .sentence span { padding: 3px 5px; border-radius: 5px; cursor: pointer; }
+  .sentence span.q { outline: 2px solid var(--accent); }
+  .bars { margin-top: 14px; font: 12px var(--mono); }
+  .bars div { display: grid; grid-template-columns: 90px 1fr 44px; gap: 8px; align-items: center; margin: 3px 0; }
+  .bars i { display: block; height: 8px; background: var(--accent); border-radius: 4px; }
+  .bars span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="back" href="../../">← portfolio</a>
+    <button class="theme-btn" type="button">dark</button>
+  </div>
+  <span class="eyebrow">app · transformer attention</span>
+  <h1>Attention Lens</h1>
+  <p class="lede">Every token asks a question (query) and every token offers an answer (key). Type a sentence and see how four attention heads distribute weight, and how the choice of positional encoding changes the picture.</p>
+
+  <div class="panel" style="margin-top:20px">
+    <input id="text" type="text" value="The cat sat on the mat because the cat was tired." maxlength="200" aria-label="Sentence">
+    <div class="controls">
+      <label>position
+        <span class="seg" id="pos">
+          <button data-v="none">none</button><button data-v="sin" class="on">sinusoidal</button><button data-v="rope">RoPE</button><button data-v="alibi">ALiBi</button>
+        </span>
+      </label>
+      <label><input type="checkbox" id="causal" checked> causal mask</label>
+      <label>content <input type="range" id="content" min="0" max="3" step="0.05" value="1.4"></label>
+      <label>temperature <input type="range" id="temp" min="0.2" max="3" step="0.05" value="1"></label>
+    </div>
+    <p class="note" id="explain"></p>
+  </div>
+
+  <div class="heads" id="heads"></div>
+
+  <div class="layout">
+    <div class="panel matrix"><div class="stat" style="margin-bottom:10px">rows = query · columns = key · click a row label to inspect it</div><div class="grid" id="grid"></div></div>
+    <div class="panel">
+      <div class="stat" style="margin-bottom:6px">click a word to make it the query</div>
+      <div class="sentence" id="sentence"></div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:24px">How it works: each token gets an embedding built from hashed character n-grams, so repeated or similar words have similar vectors. Each head projects those embeddings with its own fixed random matrix and computes softmax(qkᵀ/√d). Heads are not trained, which keeps the effect of positional encoding easy to see in isolation. Everything runs locally in your browser.</p>
+  <footer class="site">Attention Lens · part of the portfolio app collection</footer>
+</div>
+
+<script>
+const D = 32, DH = 8, H = 4;
+const EXPLAIN = {
+  none: "No positional signal: attention depends only on content, so identical words attend identically wherever they appear. The model can't tell word order.",
+  sin: "Sinusoidal: a fixed position vector is added to each embedding before projection (original Transformer). Position leaks into both content and position terms.",
+  rope: "RoPE: queries and keys are rotated by an angle proportional to their position, so q·k depends on relative distance. Each head here uses a different base frequency, giving different wavelengths.",
+  alibi: "ALiBi: no position vectors at all. A linear penalty −m·|i−j| is added to the attention score; each head gets a different slope m (1, ½, ¼, ⅛), so some heads look locally and others globally."
+};
+
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function gauss(r) { return Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r()); }
+function norm(v) { const n = Math.hypot(...v) || 1; return v.map(x => x / n); }
+
+function embed(tok) {
+  const t = "^" + tok.toLowerCase() + "$", v = new Array(D).fill(0), feats = [tok.toLowerCase(), tok.toLowerCase()];
+  for (let i = 0; i + 3 <= t.length; i++) feats.push(t.slice(i, i + 3));
+  for (const f of feats) { const r = rng(hash(f)); for (let d = 0; d < D; d++) v[d] += gauss(r); }
+  return norm(v);
+}
+function sinPE(p) { const v = []; for (let i = 0; i < D / 2; i++) { const w = 1 / Math.pow(100, 2 * i / D); v.push(Math.sin(p * w), Math.cos(p * w)); } return norm(v); }
+const W = Array.from({ length: H }, (_, h) => { const r = rng(1000 + h * 77); return Array.from({ length: D }, () => Array.from({ length: DH }, () => gauss(r) / Math.sqrt(DH))); });
+function project(x, h) { const out = new Array(DH).fill(0); for (let d = 0; d < D; d++) for (let k = 0; k < DH; k++) out[k] += x[d] * W[h][d][k]; return out; }
+function rope(v, p, base) { const o = v.slice(); for (let i = 0; i < DH / 2; i++) { const th = p * Math.pow(base, -2 * i / DH), c = Math.cos(th), s = Math.sin(th); o[2 * i] = v[2 * i] * c - v[2 * i + 1] * s; o[2 * i + 1] = v[2 * i] * s + v[2 * i + 1] * c; } return o; }
+
+const state = { pos: "sin", head: 0, q: null };
+const $ = id => document.getElementById(id);
+
+function tokenize(s) { return (s.match(/[A-Za-z0-9']+|[^\sA-Za-z0-9]/g) || []).slice(0, 28); }
+
+function compute() {
+  const toks = tokenize($("text").value), n = toks.length, causal = $("causal").checked;
+  const c = +$("content").value, T = +$("temp").value;
+  const X = toks.map((t, i) => { let e = embed(t).map(x => x * c); if (state.pos === "sin") { const p = sinPE(i); e = e.map((x, d) => x + 1.2 * p[d]); } return e; });
+  const heads = [];
+  for (let h = 0; h < H; h++) {
+    let Q = X.map(x => project(x, h));
+    if (state.pos === "rope") { const base = [10, 40, 160, 640][h]; Q = Q.map((q, i) => rope(q, i, base)); }
+    const slope = [1, 0.5, 0.25, 0.125][h];
+    const A = [];
+    for (let i = 0; i < n; i++) {
+      const row = new Array(n).fill(0); let mx = -Infinity;
+      for (let j = 0; j < n; j++) {
+        if (causal && j > i) { row[j] = -Infinity; continue; }
+        let s = Q[i].reduce((a, q, k) => a + q * Q[j][k], 0) / Math.sqrt(DH) * 2.5;
+        if (state.pos === "alibi") s -= slope * Math.abs(i - j);
+        row[j] = s / T; mx = Math.max(mx, row[j]);
+      }
+      let z = 0; for (let j = 0; j < n; j++) { row[j] = row[j] === -Infinity ? 0 : Math.exp(row[j] - mx); z += row[j]; }
+      A.push(row.map(x => x / z));
+    }
+    heads.push(A);
+  }
+  const avg = heads[0].map((r, i) => r.map((_, j) => heads.reduce((a, A) => a + A[i][j], 0) / H));
+  heads.push(avg);
+  return { toks, heads, causal };
+}
+
+function shade(v) { return `color-mix(in srgb, var(--accent) ${Math.round(Math.pow(v, 0.7) * 100)}%, var(--bg))`; }
+
+function render() {
+  const { toks, heads, causal } = compute(), n = toks.length;
+  if (state.q === null || state.q >= n) state.q = n - 1;
+  $("explain").textContent = EXPLAIN[state.pos];
+
+  // head thumbnails
+  const hb = $("heads"); hb.innerHTML = "";
+  heads.forEach((A, h) => {
+    const b = document.createElement("button"); b.className = "headbtn" + (h === state.head ? " on" : "");
+    const cv = document.createElement("canvas"); b.appendChild(cv);
+    b.appendChild(document.createTextNode(h < H ? `head ${h + 1}` + (state.pos === "alibi" ? ` · m=${[1, "½", "¼", "⅛"][h]}` : state.pos === "rope" ? ` · base ${[10, 40, 160, 640][h]}` : "") : "average"));
+    b.onclick = () => { state.head = h; render(); };
+    hb.appendChild(b);
+    requestAnimationFrame(() => {
+      const s = 120; cv.width = s; cv.height = s; const g = cv.getContext("2d"), acc = cssVar("--accent"), cs = s / Math.max(n, 1);
+      g.fillStyle = cssVar("--bg"); g.fillRect(0, 0, s, s);
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.globalAlpha = Math.pow(A[i][j], 0.7); g.fillStyle = acc; g.fillRect(j * cs, i * cs, cs, cs); }
+    });
+  });
+
+  // big matrix
+  const A = heads[state.head], grid = $("grid");
+  grid.style.gridTemplateColumns = `minmax(50px, 90px) repeat(${n}, minmax(14px, 1fr))`;
+  let html = `<div></div>` + toks.map(t => `<div class="lab col">${esc(t)}</div>`).join("");
+  for (let i = 0; i < n; i++) {
+    html += `<div class="lab row${i === state.q ? " sel" : ""}" data-i="${i}">${esc(toks[i])}</div>`;
+    for (let j = 0; j < n; j++) {
+      const masked = causal && j > i;
+      html += masked ? `<div class="cell masked"></div>` : `<div class="cell" title="${esc(toks[i])} → ${esc(toks[j])}: ${(A[i][j] * 100).toFixed(1)}%" style="background:${shade(A[i][j])}"></div>`;
+    }
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll(".lab.row").forEach(el => el.onclick = () => { state.q = +el.dataset.i; render(); });
+
+  // sentence view
+  const row = A[state.q];
+  $("sentence").innerHTML = toks.map((t, j) => `<span data-j="${j}" class="${j === state.q ? "q" : ""}" style="background:${shade(row[j])}">${esc(t)}</span>`).join(" ");
+  $("sentence").querySelectorAll("span").forEach(el => el.onclick = () => { state.q = +el.dataset.j; render(); });
+  const top = row.map((v, j) => [v, j]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, 6);
+  $("bars").innerHTML = `<div class="stat" style="display:block;margin-bottom:6px">“${esc(toks[state.q] || "")}” attends most to</div>` +
+    top.map(([v, j]) => `<div><span>${esc(toks[j])} <small style="color:var(--muted)">#${j}</small></span><i style="width:${(v * 100).toFixed(1)}%"></i><span>${(v * 100).toFixed(0)}%</span></div>`).join("");
+}
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+document.querySelectorAll("#pos button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#pos button").forEach(x => x.classList.toggle("on", x === b)); state.pos = b.dataset.v; render();
+});
+["text", "causal", "content", "temp"].forEach(id => $(id).addEventListener("input", render));
+window.addEventListener("themechange", render);
+render();
+</script>
+</body>
+</html>
