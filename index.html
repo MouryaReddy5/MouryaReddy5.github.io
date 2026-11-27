@@ -10,7 +10,6 @@
 <style>
   header.hero h1 { font-size: 44px; margin: 0 0 4px; }
   header.hero .role { font: 14px var(--mono); color: var(--muted); margin-bottom: 20px; }
-  header.hero .eq { font-family: var(--serif); font-style: italic; color: var(--muted); margin: 0 0 20px; }
   nav.links { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 14px var(--mono); }
   section { margin-top: 56px; }
   section > h2 { font-size: 26px; margin: 0 0 4px; }
@@ -26,6 +25,19 @@
   .app p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; }
   .tag { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+  .repos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .repo {
+    display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; color: var(--fg); transition: border-color .15s, transform .15s;
+  }
+  .repo:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
+  .repo .rn { font: 600 14px var(--mono); color: var(--accent); overflow-wrap: anywhere; display: flex; gap: 8px; align-items: center; }
+  .repo .rn::before { content: ""; width: 14px; height: 14px; flex: none; opacity: .7; background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.71 1.71.75.75 0 0 1-1.06 1.06A2.49 2.49 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.71A2.49 2.49 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.71 1.71.75.75 0 0 1-1.06 1.06A2.49 2.49 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.71A2.49 2.49 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .repo p { margin: 8px 0 12px; color: var(--muted); font-size: 14px; flex: 1; }
+  .repo .rm { display: flex; flex-wrap: wrap; gap: 14px; font: 12px var(--mono); color: var(--muted); }
+  .repo .rm i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
   ul.list { list-style: none; margin: 0; padding: 0; }
   ul.list li { padding: 14px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; }
   ul.list li:last-child { border-bottom: 1px solid var(--line); }
@@ -46,7 +58,6 @@
 
   <header class="hero">
     <h1>Mourya Reddy</h1>
-    <p class="eq">softmax(QKᵀ / √d) · V</p>
     <p class="lede">
       I build and study deep learning systems, from attention variants and optimizers to
       reinforcement learning for language models. Below are small apps that turn those ideas
@@ -92,19 +103,25 @@
 
   <section id="projects">
     <h2>Projects</h2>
-    <p class="sub">Selected work on GitHub.</p>
-    <ul class="list">
-      <li>
-        <a class="t" href="https://github.com/MouryaReddy5/Parallel-CNN-Transformer-Video-Activity-Recognition">Parallel CNN + Transformer for Video Activity Recognition</a>
-        <span class="m">PyTorch</span>
-        <span class="d">Two-stream architecture combining parallel 3D CNNs with transformer-based spatio-temporal tokens, evaluated on UCF datasets.</span>
-      </li>
-      <li>
-        <a class="t" href="https://github.com/MouryaReddy5/CS336">CS336: Language Modeling from Scratch</a>
-        <span class="m">PyTorch</span>
-        <span class="d">Tokenizer, transformer LM, training loop and systems work from Stanford's CS336.</span>
-      </li>
-    </ul>
+    <p class="sub">Public repositories on <a href="https://github.com/MouryaReddy5">GitHub</a>, loaded live.</p>
+    <div class="repos" id="repos">
+      <!-- Fallback shown if the GitHub API can't be reached; replaced by live data when it loads. -->
+      <a class="repo" href="https://github.com/MouryaReddy5/Parallel-CNN-Transformer-Video-Activity-Recognition">
+        <div class="rn">Parallel-CNN-Transformer-Video-Activity-Recognition</div>
+        <p>A novel two-stream architecture for Video Activity Recognition (VAR) combining Parallel 3D CNNs and Transformer-based Spatio-Temporal Tokens for superior performance on UCF datasets.</p>
+        <div class="rm"><span><i style="background:#DA5B0B"></i>Jupyter Notebook</span></div>
+      </a>
+      <a class="repo" href="https://github.com/MouryaReddy5/CS336">
+        <div class="rn">CS336</div>
+        <p>Language Modeling from Scratch</p>
+        <div class="rm"></div>
+      </a>
+      <a class="repo" href="https://github.com/MouryaReddy5/Distributed_Systems">
+        <div class="rn">Distributed_Systems</div>
+        <p></p>
+        <div class="rm"></div>
+      </a>
+    </div>
   </section>
 
   <footer class="site">© <span id="yr"></span> Mourya Reddy · built with plain HTML, hosted on GitHub Pages</footer>
@@ -112,6 +129,27 @@
 
 <script>
 document.getElementById("yr").textContent = new Date().getFullYear();
+
+// Load public repos live from GitHub so new ones show up automatically.
+(function () {
+  var LANG = { Python: "#3572A5", "Jupyter Notebook": "#DA5B0B", JavaScript: "#f1e05a", TypeScript: "#3178c6", HTML: "#e34c26", "C++": "#f34b7d", C: "#555555", Go: "#00ADD8", Rust: "#dea584", Java: "#b07219", Cuda: "#3A4E3A", Shell: "#89e051" };
+  var esc = function (s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  fetch("https://api.github.com/users/MouryaReddy5/repos?per_page=100&sort=pushed")
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (repos) {
+      repos = repos.filter(function (r) { return !r.fork && !r.private && r.name.toLowerCase() !== "mouryareddy5.github.io"; });
+      if (!repos.length) return;
+      document.getElementById("repos").innerHTML = repos.map(function (r) {
+        var meta = [];
+        if (r.language) meta.push('<span><i style="background:' + (LANG[r.language] || "var(--muted)") + '"></i>' + esc(r.language) + "</span>");
+        if (r.stargazers_count) meta.push("<span>★ " + r.stargazers_count + "</span>");
+        if (r.forks_count) meta.push("<span>⑂ " + r.forks_count + "</span>");
+        meta.push("<span>updated " + new Date(r.pushed_at).toLocaleDateString(undefined, { month: "short", year: "numeric" }) + "</span>");
+        return '<a class="repo" href="' + esc(r.html_url) + '"><div class="rn">' + esc(r.name) + "</div><p>" + esc(r.description) + '</p><div class="rm">' + meta.join("") + "</div></a>";
+      }).join("");
+    })
+    .catch(function () { /* keep the static fallback cards */ });
+})();
 
 // Small generative thumbnails for each app card, redrawn when the theme changes.
 function drawThumbs() {
