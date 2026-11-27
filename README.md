@@ -1,15 +1,13 @@
 # Portfolio
 
-Personal portfolio plus four in-browser ML apps. Plain HTML/CSS/JS, no build step, ready for GitHub Pages.
+Personal portfolio, live at https://mouryareddy5.github.io. Plain HTML/CSS/JS, no build step.
 
-```
-index.html                 portfolio home
-assets/site.css, theme.js  shared styles + light/dark toggle
-apps/attention-lens/       multi-head attention with sinusoidal / RoPE / ALiBi
-apps/optimizer-arena/      SGD, Momentum, RMSProp, Adam, Muon on 2D loss landscapes
-apps/tinygpt/              char-level GPT trained in the browser (TensorFlow.js, WebGL)
-apps/grpo/                 GRPO vs REINFORCE on a toy arithmetic task
-```
+The apps live in their own repos and are linked from the home page:
+[attention-lens](https://github.com/MouryaReddy5/attention-lens),
+[optimizer-arena](https://github.com/MouryaReddy5/optimizer-arena),
+[tinygpt-writer](https://github.com/MouryaReddy5/tinygpt-writer),
+[grpo-playground](https://github.com/MouryaReddy5/grpo-playground).
+`apps/` only holds redirects from the old URLs.
 
 ## Before publishing
 
