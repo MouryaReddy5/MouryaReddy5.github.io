@@ -2,17 +2,15 @@
 
 Personal portfolio, live at https://mouryareddy5.github.io. Plain HTML/CSS/JS, no build step.
 
-The apps live in their own repos and are linked from the home page:
+The featured project, [webgpu-llm-engine](https://github.com/MouryaReddy5/webgpu-llm-engine), and the apps live in their own repos and are linked from the home page:
 [attention-lens](https://github.com/MouryaReddy5/attention-lens),
 [optimizer-arena](https://github.com/MouryaReddy5/optimizer-arena),
 [tinygpt-writer](https://github.com/MouryaReddy5/tinygpt-writer),
 [grpo-playground](https://github.com/MouryaReddy5/grpo-playground).
 `apps/` only holds redirects from the old URLs.
 
-## Before publishing
-
-Search for `TODO` in `index.html` and fill in: your name, title, bio, LinkedIn, email,
-experience/education, and drop a `resume.pdf` in the repo root.
+The visit counter in the footer uses the free [Abacus](https://abacus.jasoncameron.dev) counter API
+(no cookies): `visits` counts page loads, `visitors` counts once per browser.
 
 ## Publish on GitHub Pages
 

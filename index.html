@@ -45,6 +45,10 @@
   ul.list .t { font-weight: 600; }
   ul.list .d { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
   ul.list .m { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+  .app.feature { border-color: var(--accent); }
+  .app.feature canvas { height: 140px; }
+  .app.feature h3 { font-size: 24px; }
+  .visits { font: 12px var(--mono); color: var(--muted); margin-top: 6px; }
   .skills { display: flex; flex-wrap: wrap; gap: 6px; }
   .skills .tag { font-size: 12px; padding: 4px 10px; color: var(--fg); }
   @media (max-width: 520px) { header.hero h1 { font-size: 34px; } ul.list li { grid-template-columns: 1fr; } }
@@ -66,11 +70,47 @@
       into things you can play with, plus the projects I've shipped.
     </p>
     <nav class="links">
+      <a href="#research">research</a>
+      <a href="#featured">featured</a>
       <a href="#apps">apps</a>
       <a href="#projects">projects</a>
       <a href="https://github.com/MouryaReddy5">github</a>
     </nav>
   </header>
+
+  <section id="research">
+    <h2>Research</h2>
+    <p class="sub">Shared tasks, papers and thesis work.</p>
+    <ul class="list">
+      <li><span class="t">TREC Video Question Answering (VQA)</span><span class="m">TREC 2026</span>
+        <span class="d">NIST TREC track on answering natural-language questions about video content.</span></li>
+      <li><span class="t">TREC Retrieval-Augmented Generation (RAG)</span><span class="m">TREC</span>
+        <span class="d">NIST TREC track on retrieving supporting passages and generating grounded, cited answers.</span></li>
+      <li><span class="t">Paper under review at CVPR 2027</span><span class="m">under review</span>
+        <span class="d">Details withheld during anonymous review.</span></li>
+      <li><span class="t">Undergraduate thesis</span><span class="m">2024</span>
+        <span class="d">B.Tech thesis, Department of Computer Science and Engineering, NIT Warangal.</span></li>
+    </ul>
+  </section>
+
+  <section id="education">
+    <h2>Education</h2>
+    <ul class="list">
+      <li><span class="t">National Institute of Technology, Warangal</span><span class="m">2020 – 2024</span>
+        <span class="d">B.Tech, Computer Science and Engineering</span></li>
+    </ul>
+  </section>
+
+  <section id="featured">
+    <h2>Featured</h2>
+    <p class="sub">The biggest build here: a language-model inference engine written from scratch.</p>
+    <a class="app feature" href="https://mouryareddy5.github.io/webgpu-llm-engine/">
+      <canvas data-thumb="engine"></canvas>
+      <h3>WebGPU LLM Engine</h3>
+      <p>Runs a real 135M-parameter Llama-architecture model (SmolLM2) in your browser on hand-written WebGPU kernels: KV cache, grouped-query attention, RoPE, int8/int4 weight quantization and speculative decoding, with a live profiler showing tokens/s and per-kernel GPU time.</p>
+      <div class="tags"><span class="tag">inference</span><span class="tag">WebGPU</span><span class="tag">WGSL kernels</span><span class="tag">quantization</span><span class="tag">speculative decoding</span></div>
+    </a>
+  </section>
 
   <section id="apps">
     <h2>Apps</h2>
@@ -126,7 +166,8 @@
     </div>
   </section>
 
-  <footer class="site">© <span id="yr"></span> Mourya Reddy · built with plain HTML, hosted on GitHub Pages</footer>
+  <footer class="site">© <span id="yr"></span> Mourya Reddy · built with plain HTML, hosted on GitHub Pages
+    <div class="visits" id="visits" hidden></div></footer>
 </div>
 
 <script>
@@ -151,6 +192,23 @@ document.getElementById("yr").textContent = new Date().getFullYear();
       }).join("");
     })
     .catch(function () { /* keep the static fallback cards */ });
+})();
+
+// Tiny visit counter (abacus.jasoncameron.dev, a free public counter API; no cookies, no personal data).
+// "visits" counts every page load; "visitors" counts once per browser, tracked with a localStorage flag.
+(function () {
+  var NS = "https://abacus.jasoncameron.dev/", K = "mouryareddy5-portfolio";
+  var seen = false; try { seen = localStorage.getItem("visited") === "1"; } catch (e) {}
+  var get = function (path) { return fetch(NS + path).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) { return j.value; }); };
+  Promise.all([get("hit/" + K + "/visits"), get((seen ? "get/" : "hit/") + K + "/visitors")])
+    .then(function (v) {
+      try { localStorage.setItem("visited", "1"); } catch (e) {}
+      var el = document.getElementById("visits");
+      var pl = function (n, w) { return n.toLocaleString() + " " + w + (n === 1 ? "" : "s"); };
+      el.textContent = pl(v[0], "visit") + " · " + pl(v[1], "unique visitor");
+      el.hidden = false;
+    })
+    .catch(function () { /* counter unreachable: show nothing */ });
 })();
 
 // Small generative thumbnails for each app card, redrawn when the theme changes.
@@ -185,6 +243,17 @@ function drawThumbs() {
       g.font = "13px " + cssVar("--mono"); g.fillStyle = cssVar("--muted");
       var txt = "To be, or not to be: that is the qu|", lines = ["ROMEO:", "What light through yonder", "window breaks? It is the", "east, and the sun ▍"];
       lines.forEach(function (l, k) { g.fillStyle = k === 3 ? acc : cssVar("--muted"); g.fillText(l, 14, 24 + k * 22); });
+    } else if (kind === "engine") {
+      // token stream with accepted (accent) / drafted (muted) blocks, like speculative decoding
+      var bwid = 16, gap = 4, rows = 4, cols2 = Math.floor((w - 28) / (bwid + gap));
+      for (var rr = 0; rr < rows; rr++) for (var cc = 0; cc < cols2; cc++) {
+        var v2 = Math.sin(rr * 3.1 + cc * 0.7) * 0.5 + 0.5, last = rr === rows - 1 && cc > cols2 * 0.6;
+        if (last) continue;
+        g.globalAlpha = v2 > 0.7 ? 1 : 0.35 + v2 * 0.4;
+        g.fillStyle = v2 > 0.7 ? cols[2] : acc;
+        g.fillRect(14 + cc * (bwid + gap), 16 + rr * (bwid + 12), bwid, bwid);
+      }
+      g.globalAlpha = 1;
     } else if (kind === "grpo") {
       var G = 8, bw = (w - 40) / G;
       var rw = [1, 0, 1, 1, 0, 0.5, 1, 0], mean = rw.reduce(function (a, b) { return a + b; }) / G;
